@@ -7,7 +7,7 @@ def awgn_noise (signal, snr, rate):
     return noisy_signal
 
 
-#sigma - controlls the strength of the phase deviation
+#sigma - controls the strength of the phase deviation
 def phase_noise(signal, sigma):
     A = sigma * np.random.randn(len(signal))
     fftsignal = np.fft.fft(signal)
