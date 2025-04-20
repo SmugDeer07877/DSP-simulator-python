@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def ber (data, new_data):
     errors = sum(b1 != b2 for b1, b2 in zip(data, new_data))
     ber = errors / len(data)
@@ -26,4 +27,11 @@ def plot_bersnr(ber, snr):
     plt.ylabel('BER')
     plt.grid()
     plt.show()
+
+def plot_constelation(og_signal, new_signal):
+    plt.scatter(np.real(new_signal), np.imag(new_signal))
+    plt.scatter(np.real(og_signal), np.imag(og_signal))
+    plt.grid()
+    plt.show()
+
 

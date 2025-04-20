@@ -81,14 +81,16 @@ def dehamming(code):
     #print(cases)
     if error > 0 and (sum % 2 == code[0]):
         print("Two Bit Error Detected")
-        return
     elif error > 0:
         error_index = 4*(cases["q1"] & cases["q2"]) | (cases["q3"] & cases["q4"])
+        if error_index > len(code):
+            print("Unfixable Error")
         #print("error index:", error_index)
-        if code[error_index] == 0:
-            code[error_index] = 1
         else:
-            code[error_index] = 0
+            if code[error_index] == 0:
+                code[error_index] = 1
+            else:
+                code[error_index] = 0
     else:
         print("No error detected")
     #print("corrected code:",code)
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     data = [1,0,1,0,1,0,1,0,1,0,1]
     data1 = [1,1,0,0,1,0,1,1,0,1,1]
     data2 = [0,1,0,1,1,1,0,1,0,0,0]
-    corrupted = [1,1,0,1,0,1,0,0,1,1,0,1,1,0,1,1]
+    corrupted = [1,1,1,0,1,1,0,0,1,1,1,1,1,0,0,1]
     new_data = hamming(data1)
     print("hammed_data:", new_data)
     corrected_code = dehamming(corrupted)

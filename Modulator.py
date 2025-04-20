@@ -19,9 +19,25 @@ def modulator(data):
 
 
 def demodulator (data):
-    constellation = 1 / np.sqrt(2) * np.array([1+1j, -1+1j, -1-1j, 1-1j])
+    demodulated_data = []
+    constellation = 1 / math.sqrt(2) * np.array([1+1j, -1+1j, -1-1j, 1-1j])
     demod_data = [constellation[np.argmin(np.abs(s - constellation))] for s in data]
-    return demod_data
+    for i in range (len(demod_data)):
+        if demod_data[i] == ((1j+1)/math.sqrt(2)):
+            demodulated_data.append(0)
+            demodulated_data.append(0)
+        elif demod_data[i] == (1j-1) / math.sqrt(2):
+            demodulated_data.append(0)
+            demodulated_data.append(1)
+        elif demod_data[i] == (-1j+1) / math.sqrt(2):
+            demodulated_data.append(1)
+            demodulated_data.append(0)
+        elif demod_data[i] == (-1j-1) / math.sqrt(2):
+            demodulated_data.append(1)
+            demodulated_data.append(1)
+        else:
+            print("What is that??")
+    return demodulated_data
 
 
 

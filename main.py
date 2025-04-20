@@ -10,7 +10,7 @@ from Modulator import modulator, demodulator
 from Filter import fillter, matched_fillter
 from Noise import awgn_noise
 from write_image import bits_to_image
-from Plot import ber, snr, plot_bersnr
+from Plot import ber, snr, plot_bersnr, plot_constelation
 
 
 #Encoding:
@@ -40,7 +40,7 @@ modulated_data = modulator(interleaved_data)
 #filltered_data = fillter(modulated_data)
 
 #Loss simulation:
-noise_data = awgn_noise(modulated_data, 20, 1)
+noise_data = awgn_noise(modulated_data, 10, 1)
 
 #Matched Filter:
 #matched_data = matched_fillter(filltered_data)
@@ -63,8 +63,8 @@ for l in range(int(len(deinterleaved_data)/16)):
 bits_to_image(dehamming_data)
 
 #BER/SNR Plot
-# ber = ber(data, dehamming_data)
-# snr = snr(modulated_data, demodulated_data)
-# plot_bersnr(ber, snr)
+print(ber(data, dehamming_data))
+print(snr(modulated_data, noise_data))
+plot_constelation(modulated_data, noise_data)
 
 
