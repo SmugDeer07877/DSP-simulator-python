@@ -24,6 +24,26 @@ def IQ_imbalance (signal, gain_db, phase_deg):
     Q_imbalance = gain * (np.cos(phase)*Q + np.sin(phase)*I)
     return I_imbalance + Q_imbalance*1j
 
+def minor_sat(signal, a):
+    if signal.type() == complex():
+        return np.tanh(np.real(signal)*a) + 1j* np.tanh(np.imag(signal)*a)
+    else:
+        return np.tanh(signal*a)
+
+def AM_noise(signal, cycles, min, max, p):
+    '''
+    parameters:
+    signal: input signal
+    cycles: normalized frequency (number of cycles over the full signal)
+    min, max = gain fluctuation range
+    p = intensity of amplitude variation (in percent [%])
+    '''
+    n = len(signal)
+    noise = 1 + p * np.cos(2 * np.pi * cycles * np.arange(n) / n) * np.random.uniform(min, max, size = n)
+    return noise * signal
+
+
+
 def show_noise (t, signal, noise_signal, noisetype = None):
     plt.figure(figsize=(10, 4))
     plt.plot(t, signal, label='Original Signal')
@@ -57,7 +77,8 @@ if __name__ == "__main__":
     signal = np.cos(2 * np.pi * f * t)
     #noise_signal = np.cos(2 * np.pi * f * t + sigma * np.random.randn(len(t)))
     #noise_signal = phase_noise(signal)
-    noise_signal = awgn_noise(signal)
+    #noise_signal = awgn_noise(signal)
+    noise_signal = minor_sat(signal, 3)
     show_noise(t, signal, noise_signal, "awgn Noises")
     show_noisefft(signal, noise_signal, "awgn Noises")
 
