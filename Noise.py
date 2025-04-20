@@ -7,13 +7,22 @@ def awgn_noise (signal, snr, rate):
     return noisy_signal
 
 
-sigma = 5 # controlls the strength of the phase deviation
-def phase_noise(signal):
+#sigma - controlls the strength of the phase deviation
+def phase_noise(signal, sigma):
     A = sigma * np.random.randn(len(signal))
     fftsignal = np.fft.fft(signal)
     fftsignal_noise = fftsignal * np.exp(1j * A)
     signal_noise = np.fft.ifft(fftsignal_noise)
     return signal_noise
+
+def IQ_imbalance (signal, gain_db, phase_deg):
+    gain = 10**(gain_db / 20)
+    phase = np.deg2rad(phase_deg)
+    I = np.real(signal)
+    Q = np.imag(signal)
+    I_imbalance = I
+    Q_imbalance = gain * (np.cos(phase)*Q + np.sin(phase)*I)
+    return I_imbalance + Q_imbalance*1j
 
 def show_noise (t, signal, noise_signal, noisetype = None):
     plt.figure(figsize=(10, 4))
@@ -47,9 +56,9 @@ if __name__ == "__main__":
     f = 4
     signal = np.cos(2 * np.pi * f * t)
     #noise_signal = np.cos(2 * np.pi * f * t + sigma * np.random.randn(len(t)))
-    noise_signal = phase_noise(signal)
-    #noise_signal = awgn_noise(signal)
-    show_noise(t, signal, noise_signal, "Phase Noises")
-    show_noisefft(signal, noise_signal, "Phase Noises")
+    #noise_signal = phase_noise(signal)
+    noise_signal = awgn_noise(signal)
+    show_noise(t, signal, noise_signal, "awgn Noises")
+    show_noisefft(signal, noise_signal, "awgn Noises")
 
 
