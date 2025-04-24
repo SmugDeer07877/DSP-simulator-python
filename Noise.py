@@ -3,7 +3,7 @@ import numpy as np
 from commpy.channels import awgn
 from typing import Tuple
 from enum import Enum
-
+from icecream import ic
 from Utils import show_signal
 
 class TUPLE_INDEX(Enum):
@@ -11,9 +11,88 @@ class TUPLE_INDEX(Enum):
     MAX = 1
 
 class Augmentation:
-    def __init__(self, snr: Tuple, rate: Tuple, sigma: Tuple,
-                 gain_db: Tuple, phase_deg: Tuple, a: Tuple,
-                 cycles:Tuple, p:Tuple, noise:Tuple):
+    """
+    A class for applying a variety of signal-level augmentations commonly used in communications and deep learning.
+
+    The augmentations simulate different types of channel and hardware impairments, including:
+        - Additive White Gaussian Noise (AWGN)
+        - Phase noise
+        - IQ imbalance (amplitude and phase mismatch)
+        - Minor non-linear saturation
+        - Amplitude Modulation (AM) noise
+
+    These augmentations are useful for training robust models that can generalize to real-world noisy signal conditions.
+
+    Parameters
+    ----------
+    snr : Tuple[int, int]
+        Signal-to-noise ratio range in dB for AWGN noise.
+
+    rate : Tuple[float, float]
+        Forward error correction (FEC) coding rate range. Used with the AWGN function.
+
+    sigma : Tuple[float, float]
+        Range for standard deviation of the phase noise process.
+
+    gain_db : Tuple[float, float]
+        Range (in dB) for amplitude mismatch between I and Q in IQ imbalance.
+
+    phase_deg : Tuple[float, float]
+        Range (in degrees) for phase mismatch between I and Q in IQ imbalance.
+
+    a : Tuple[float, float]
+        Range for non-linearity parameter used in minor saturation.
+
+    cycles : Tuple[int, int]
+        Range of cycles for AM noise (affects the frequency of amplitude variation).
+
+    p : Tuple[float, float]
+        Percentage intensity of amplitude modulation noise.
+
+    noise : Tuple[int, int]
+        Uniform gain variation range (in percent, centered around 100%) for AM noise.
+
+    verbose : int
+        Verbosity level for debugging/logging using `icecream`. If > 0, prints intermediate parameters.
+    """
+    def __init__(self, snr: Tuple = (0,15), rate: Tuple = (0,1), sigma: Tuple = (0,1),
+                 gain_db: Tuple = (-3,3), phase_deg: Tuple = (-10,10), a: Tuple = (0,20),
+                 cycles:Tuple = (0,100), p:Tuple = (0,20), noise:Tuple = (80,110), verbose: int = 0):
+        """
+        Initializes the Augmentation object with parameter ranges for various signal impairments.
+
+        Parameters
+        ----------
+        snr : Tuple[int, int]
+            SNR range in dB for AWGN noise (e.g., (5, 13)).
+
+        rate : Tuple[float, float]
+            Coding rate range for FEC simulation (usually (1, 1) if no FEC is considered).
+
+        sigma : Tuple[float, float]
+            Standard deviation range for phase noise.
+
+        gain_db : Tuple[float, float]
+            Amplitude imbalance in dB for IQ imbalance (e.g., (-3, 3)).
+
+        phase_deg : Tuple[float, float]
+            Phase mismatch in degrees for IQ imbalance (e.g., (-10, 10)).
+
+        a : Tuple[float, float]
+            Saturation parameter range for simulating minor saturation non-linearity.
+
+        cycles : Tuple[int, int]
+            Normalized frequency (number of amplitude fluctuation cycles) over the signal length for AM noise.
+
+        p : Tuple[float, float]
+            Percentage intensity of amplitude modulation (e.g., (0, 20) for 0–20%).
+
+        noise : Tuple[int, int]
+            AM noise gain fluctuation range in percent, centered around 100% (e.g., (80, 110)).
+
+        verbose : int
+            If > 0, enables verbose output using `icecream` for debugging.
+        """
         self.snr_params = snr
         self.rate_params = rate
         self.sigma_params = sigma
@@ -23,6 +102,7 @@ class Augmentation:
         self.cycles_params = cycles
         self.p_params = p
         self.noise_params = noise
+        self.verbose = verbose
 
 
     def _awgn_noise (self, signal):
@@ -42,6 +122,8 @@ class Augmentation:
         signal = signal.numpy()
         random_snr = np.random.randint(self.snr_params[TUPLE_INDEX.MIN.value] * 10, self.snr_params[TUPLE_INDEX.MAX.value] * 10) / 10
         random_rate = 1.0
+        if self.verbose:
+            ic(random_snr, random_rate)
         noisy_signal = awgn(signal,random_snr, random_rate)
         noise_signal = torch.from_numpy(noisy_signal)
         return noise_signal
@@ -61,6 +143,8 @@ class Augmentation:
         Output signal with added phase noise
         '''
         random_sigma = torch.randint(self.sigma_params[TUPLE_INDEX.MIN.value] * 100, self.sigma_params[TUPLE_INDEX.MAX.value]* 100, size=[1])/ 100
+        if self.verbose:
+            ic(random_sigma)
         A = random_sigma * torch.randn(signal.shape)
         signal_noise = signal * torch.exp(1j * A)
         return signal_noise
@@ -77,18 +161,25 @@ class Augmentation:
          phase[deg] = phase mismatch between I and Q
          -------
          Returns: 1D PyTorch tensor
-         Output signal with amplitude gain and phase shift to Q.
+         Output signal with amplitude gain and phase shift to I or Q.
          '''
+         random_IQ = torch.rand(1)
          random_gain = torch.randint(self.gain_params[TUPLE_INDEX.MIN.value]*10, self.gain_params[TUPLE_INDEX.MAX.value]*10, size=[1])/10
          random_phase = torch.randint(self.phase_params[TUPLE_INDEX.MIN.value], self.phase_params[TUPLE_INDEX.MAX.value], size=[1])
+         if self.verbose:
+             ic(random_gain, random_phase,random_IQ)
          gain = 10**(random_gain / 20)
          phase = torch.deg2rad(torch.tensor(random_phase,
                                            dtype=signal.real.dtype,
                                            device=signal.device))
          I = signal.real
          Q = signal.imag
-         I_imbalance = I
-         Q_imbalance = gain * (torch.cos(phase)*Q + torch.sin(phase)*I)
+         if random_IQ:
+            I_imbalance = I
+            Q_imbalance = gain * (torch.cos(phase)*Q + torch.sin(phase)*I)
+         else:
+            I_imbalance = gain * (torch.cos(phase)*Q + torch.sin(phase)*I)
+            Q_imbalance = Q
          return torch.complex(I_imbalance, Q_imbalance)
 
     def _minor_sat(self, signal):
@@ -105,6 +196,8 @@ class Augmentation:
         '''
         # a = 1.0 / torch.max(torch.abs(signal))
         random_a = torch.randint(self.a_params[TUPLE_INDEX.MIN.value], self.a_params[TUPLE_INDEX.MAX.value], size=[1])/10
+        if self.verbose:
+            ic(random_a)
         return torch.tanh(signal.real*random_a) + 1j* torch.tanh(signal.imag*random_a)
 
     def _AM_noise(self, signal):
@@ -124,10 +217,12 @@ class Augmentation:
          Output signal with added AM noise
          '''
          n = signal.shape[-1]
-         random_cycles = torch.randint(self.cycles_params[TUPLE_INDEX.MIN.value], self.cycles_params[TUPLE_INDEX.MAX.value], size=[1])/100
+         random_cycles = torch.randint(self.cycles_params[TUPLE_INDEX.MIN.value], self.cycles_params[TUPLE_INDEX.MAX.value], size=[1])
          random_p = torch.randint(self.p_params[TUPLE_INDEX.MIN.value], self.p_params[TUPLE_INDEX.MAX.value], size=[1])/100
          random_noise = (torch.randint(self.noise_params[TUPLE_INDEX.MIN.value], self.noise_params[TUPLE_INDEX.MAX.value], size=[1])/100
                          * torch.rand(n) + self.noise_params[TUPLE_INDEX.MIN.value])/100
+         if self.verbose:
+             ic(random_cycles, random_p, random_noise)
          noise = (1 + random_p * torch.cos(2 * torch.pi * random_cycles * torch.arange(n) / n)
                   * random_noise)
          return noise * signal
@@ -148,11 +243,11 @@ class Augmentation:
             AM noise
         '''
         #tensor_signal = torch.from_numpy(signal)
-        #noise_signal = self._awgn_noise(signal) ; show_signal(signal, noise_signal)
-        # noise_signal = self._phase_noise(signal) ; show_signal(signal, noise_signal)
-        # noise_signal = self._IQ_imbalance(signal) ; show_signal(signal, noise_signal)
-        # noise_signal = self._minor_sat(signal) ; show_signal(signal, noise_signal)
-        noise_signal = self._AM_noise(signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._awgn_noise(signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._phase_noise(noise_signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._IQ_imbalance(noise_signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._AM_noise(noise_signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._minor_sat(noise_signal) ; show_signal(signal, noise_signal)
         return noise_signal
 
 
@@ -166,7 +261,8 @@ if __name__ == "__main__":
         a = (0, 20),
         cycles = (0,100),
         p = (0, 20), # p <= 0.2 for realistic noise
-        noise = (80, 110) #centered around 1
+        noise = (80, 110), #centered around 1
+        verbose = 0
     )
     num_symbols = 1000
 
