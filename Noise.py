@@ -10,7 +10,6 @@ class TUPLE_INDEX(Enum):
     MIN = 0
     MAX = 1
 
-rolls = {}
 
 class Augmentation:
     """
@@ -57,9 +56,9 @@ class Augmentation:
     verbose : int
         Verbosity level for debugging/logging using `icecream`. If > 0, prints intermediate parameters.
     """
-    def __init__(self, snr: Tuple = (0,15), rate: Tuple = (0,1), sigma: Tuple = (0,1),
-                 gain_db: Tuple = (-3,3), phase_deg: Tuple = (-10,10), a: Tuple = (0,20),
-                 cycles:Tuple = (0,100), p:Tuple = (0,20), noise:Tuple = (80,110), verbose: int = 0):
+    def __init__(self, snr: Tuple = (0,20), sigma: Tuple = (0,0.1),
+                 gain_db: Tuple = (-0.5,0.5), phase_deg: Tuple = (-2,2), a: Tuple = (0.1,0.5),
+                 cycles:Tuple = (0,20), p:Tuple = (0,0.2), noise:Tuple = (0.9,1.1), verbose: int = 0):
         """
         Initializes the Augmentation object with parameter ranges for various signal impairments.
 
@@ -96,7 +95,6 @@ class Augmentation:
             If > 0, enables verbose output using `icecream` for debugging.
         """
         self.snr_params = snr
-        self.rate_params = rate
         self.sigma_params = sigma
         self.gain_params = gain_db
         self.phase_params = phase_deg
@@ -105,6 +103,7 @@ class Augmentation:
         self.p_params = p
         self.noise_params = noise
         self.verbose = verbose
+        self.rolls = {}
 
 
     def _awgn_noise (self, signal):
@@ -122,13 +121,13 @@ class Augmentation:
         Output signal from the channel with the specified SNR.
         '''
         signal = signal.numpy()
-        random_snr = np.random.randint(self.snr_params[TUPLE_INDEX.MIN.value] * 10, self.snr_params[TUPLE_INDEX.MAX.value] * 10) / 10
+        random_snr = np.random.randint(self.snr_params[TUPLE_INDEX.MIN.value]*100, self.snr_params[TUPLE_INDEX.MAX.value]*100) / 100
         random_rate = 1.0
         if self.verbose:
             ic(random_snr, random_rate)
         noisy_signal = awgn(signal,random_snr, random_rate)
         noise_signal = torch.from_numpy(noisy_signal)
-        rolls[f"snr"] = str(random_snr)
+        self.rolls["snr"] = str(random_snr)
         return noise_signal
 
 
@@ -145,12 +144,12 @@ class Augmentation:
         signal_noise = 1D PyTorch tensor
         Output signal with added phase noise
         '''
-        random_sigma = torch.randint(self.sigma_params[TUPLE_INDEX.MIN.value] * 100, self.sigma_params[TUPLE_INDEX.MAX.value]* 100, size=[1])/ 100
+        random_sigma = torch.randint(int(self.sigma_params[TUPLE_INDEX.MIN.value] * 100), int(self.sigma_params[TUPLE_INDEX.MAX.value]* 100), size=[1])/ 100
         if self.verbose:
             ic(random_sigma)
         A = random_sigma * torch.randn(signal.shape)
         signal_noise = signal * torch.exp(1j * A)
-        rolls["sigma"] = str(random_sigma.item())
+        self.rolls["sigma"] = str(random_sigma.item())
         return signal_noise
 
 
@@ -168,8 +167,8 @@ class Augmentation:
          Output signal with amplitude gain and phase shift to I or Q.
          '''
          random_IQ = torch.rand(1)
-         random_gain = torch.randint(self.gain_params[TUPLE_INDEX.MIN.value]*10, self.gain_params[TUPLE_INDEX.MAX.value]*10, size=[1])/10
-         random_phase = torch.randint(self.phase_params[TUPLE_INDEX.MIN.value], self.phase_params[TUPLE_INDEX.MAX.value], size=[1])
+         random_gain = torch.randint(int(self.gain_params[TUPLE_INDEX.MIN.value]*100), int(self.gain_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
+         random_phase = torch.randint(int(self.phase_params[TUPLE_INDEX.MIN.value]*100), int(self.phase_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
          if self.verbose:
              ic(random_gain, random_phase,random_IQ)
          gain = 10**(random_gain / 20)
@@ -185,8 +184,8 @@ class Augmentation:
             I_imbalance = gain * (torch.cos(phase)*Q + torch.sin(phase)*I)
             Q_imbalance = Q
 
-         rolls["gain"] = str(random_gain.item())
-         rolls["phase"] = str(random_phase.item())
+         self.rolls["gain"] = str(random_gain.item())
+         self.rolls["phase"] = str(random_phase.item())
          return torch.complex(I_imbalance, Q_imbalance)
 
     def _minor_sat(self, signal):
@@ -202,10 +201,10 @@ class Augmentation:
         Output signal at a minor saturation
         '''
         # a = 1.0 / torch.max(torch.abs(signal))
-        random_a = torch.randint(self.a_params[TUPLE_INDEX.MIN.value], self.a_params[TUPLE_INDEX.MAX.value], size=[1])/10
+        random_a = torch.randint(int(self.a_params[TUPLE_INDEX.MIN.value]*100), int(self.a_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
         if self.verbose:
             ic(random_a)
-        rolls["a"] = str(random_a.item())
+        self.rolls["a"] = str(random_a.item())
         return torch.tanh(signal.real*random_a) + 1j* torch.tanh(signal.imag*random_a)
 
     def _AM_noise(self, signal):
@@ -225,17 +224,17 @@ class Augmentation:
          Output signal with added AM noise
          '''
          n = signal.shape[-1]
-         random_cycles = torch.randint(self.cycles_params[TUPLE_INDEX.MIN.value], self.cycles_params[TUPLE_INDEX.MAX.value], size=[1])
-         random_p = torch.randint(self.p_params[TUPLE_INDEX.MIN.value], self.p_params[TUPLE_INDEX.MAX.value], size=[1])/100
-         noise_value = torch.randint(self.noise_params[TUPLE_INDEX.MIN.value], self.noise_params[TUPLE_INDEX.MAX.value], size=[1])/100
-         random_noise = (noise_value * torch.rand(n) + self.noise_params[TUPLE_INDEX.MIN.value]/100)
+         random_cycles = torch.randint(int(self.cycles_params[TUPLE_INDEX.MIN.value]*100), int(self.cycles_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
+         random_p = torch.randint(int(self.p_params[TUPLE_INDEX.MIN.value]*100), int(self.p_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
+         noise_value = torch.randint(int(self.noise_params[TUPLE_INDEX.MIN.value]*100), int(self.noise_params[TUPLE_INDEX.MAX.value]*100), size=[1])/100
+         random_noise = (noise_value * torch.rand(n) + self.noise_params[TUPLE_INDEX.MIN.value])
          if self.verbose:
              ic(random_cycles, random_p, noise_value)
          noise = (1 + random_p * torch.cos(2 * torch.pi * random_cycles * torch.arange(n) / n)
                   * random_noise)
-         rolls["cucles"] = str(random_cycles.item())
-         rolls["p"] = str(random_p.item())
-         rolls["noise"] = str(noise_value.item())
+         self.rolls["cucles"] = str(random_cycles.item())
+         self.rolls["p"] = str(random_p.item())
+         self.rolls["noise"] = str(noise_value.item())
          return noise * signal
 
     def augment(self, signal):
@@ -259,7 +258,7 @@ class Augmentation:
         noise_signal = self._IQ_imbalance(noise_signal) #; show_signal(signal, noise_signal)
         noise_signal = self._AM_noise(noise_signal) #; show_signal(signal, noise_signal)
         noise_signal = self._minor_sat(noise_signal) #; show_signal(signal, noise_signal)
-        file_name = '_'.join(f'{k}_{v}' for k, v in rolls.items())
+        file_name = '_'.join(f'{k}_{v}' for k, v in self.rolls.items())
         print(file_name)
         show_signal(signal, noise_signal, file_name)
         return noise_signal
@@ -267,15 +266,14 @@ class Augmentation:
 
 if __name__ == "__main__":
     augmentor = Augmentation(
-        snr=(5, 13),
-        rate= (1,2),
-        sigma = (0,1),
-        gain_db = (-3, 3),
-        phase_deg = (-10, 10),
-        a = (1, 20),
-        cycles = (0,100),
-        p = (0, 20), # p <= 0.2 for realistic noise
-        noise = (80, 110), #centered around 1
+        snr=(0, 20),
+        sigma = (0,0.1),
+        gain_db = (-0.5, 0.5),
+        phase_deg = (-2, 2),
+        a = (0.1, 0.5),
+        cycles = (0,20),
+        p = (0, 0.2), # p <= 0.2 for realistic noise
+        noise = (0.9, 1.1), #centered around 1
         verbose = 1
     )
     num_symbols = 1000
