@@ -18,8 +18,8 @@ def plot_time (signal, noise_signal, noisetype = None):
     '''
     plt.figure(figsize=(10, 4))
     # plt.plot(signal, label='Original Signal')
-    plt.plot(torch.real(signal), label='Lab Signal (I)')
-    plt.plot(torch.real(noise_signal), label='Real Signal (I)')
+    plt.plot(torch.real(signal), label='Lab Signal (I)', color = 'DarkRed')
+    plt.plot(torch.real(noise_signal), label='Real Signal (I)', color = "DarkOrange", alpha = 0.7)
     plt.xlabel('Time [s]')
     plt.ylabel('Amplitude')
     plt.title(noisetype)
@@ -28,9 +28,8 @@ def plot_time (signal, noise_signal, noisetype = None):
     plt.tight_layout()
     plt.show()
     plt.figure(figsize=(10, 4))
-    # plt.plot(signal, label='Original Signal')
-    plt.plot(torch.imag(signal), label='Lab Signal (Q)')
-    plt.plot(torch.imag(noise_signal), label='Real Signal (Q)')
+    plt.plot(torch.imag(signal), label='Lab Signal (Q)', color = 'DarkBlue')
+    plt.plot(torch.imag(noise_signal), label='Real Signal (Q)', color = "Cyan", alpha = 0.7)
     plt.xlabel('Time [s]')
     plt.ylabel('Amplitude')
     plt.title(noisetype)
@@ -53,7 +52,7 @@ def plot_fft(signal, noise_signal, noisetype = None):
     '''
     plt.figure(figsize=(10, 4))
     plt.plot( 10*np.log10(np.abs(fftshift(fft(signal)))), label='Lab Signal')
-    plt.plot( 10*np.log10(np.abs(fftshift(fft(noise_signal)))), label='Real Signal')
+    plt.plot( 10*np.log10(np.abs(fftshift(fft(noise_signal)))), label='Real Signal', alpha = 0.7)
     plt.xlabel('Frequency')
     plt.ylabel('Amplitude')
     plt.title(noisetype)
@@ -75,8 +74,8 @@ def plot_constelation(signal, noise_signal, noisetype = None):
     noisetype = str
     Noise type added to noise_signal
     '''
-    plt.scatter(signal.real, signal.imag)
-    plt.scatter(noise_signal.real, noise_signal.imag)
+    plt.scatter(signal.real, signal.imag, label = "Lab Signal")
+    plt.scatter(noise_signal.real, noise_signal.imag, label = "Real Signal", alpha = 0.5)
     plt.xlabel('I')
     plt.ylabel('Q')
     plt.title(noisetype)

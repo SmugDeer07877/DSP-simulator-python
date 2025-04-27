@@ -243,11 +243,12 @@ class Augmentation:
             AM noise
         '''
         #tensor_signal = torch.from_numpy(signal)
-        noise_signal = self._awgn_noise(signal) ; show_signal(signal, noise_signal)
-        noise_signal = self._phase_noise(noise_signal) ; show_signal(signal, noise_signal)
-        noise_signal = self._IQ_imbalance(noise_signal) ; show_signal(signal, noise_signal)
-        noise_signal = self._AM_noise(noise_signal) ; show_signal(signal, noise_signal)
-        noise_signal = self._minor_sat(noise_signal) ; show_signal(signal, noise_signal)
+        noise_signal = self._awgn_noise(signal) #; show_signal(signal, noise_signal)
+        noise_signal = self._phase_noise(noise_signal) #; show_signal(signal, noise_signal)
+        noise_signal = self._IQ_imbalance(noise_signal) #; show_signal(signal, noise_signal)
+        noise_signal = self._AM_noise(noise_signal) #; show_signal(signal, noise_signal)
+        noise_signal = self._minor_sat(noise_signal) #; show_signal(signal, noise_signal)
+        show_signal(signal, noise_signal)
         return noise_signal
 
 
