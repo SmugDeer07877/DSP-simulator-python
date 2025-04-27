@@ -272,7 +272,7 @@ if __name__ == "__main__":
         sigma = (0,1),
         gain_db = (-3, 3),
         phase_deg = (-10, 10),
-        a = (0, 20),
+        a = (1, 20),
         cycles = (0,100),
         p = (0, 20), # p <= 0.2 for realistic noise
         noise = (80, 110), #centered around 1
